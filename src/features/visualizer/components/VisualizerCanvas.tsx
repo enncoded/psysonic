@@ -230,6 +230,17 @@ export default function VisualizerCanvas({
     return () => observer.disconnect();
   }, []);
 
+  // The webview does not always deliver a canvas resize through the observer
+  // when the OS window changes size (see _intro.css: the CSS viewport lags on
+  // resize), so the backing store can go stale while the loop is idle. The
+  // window listener repaints it; the observer stays for container-only changes
+  // (player-bar type, queue/sidebar) that do not fire a window resize.
+  useEffect(() => {
+    const onWindowResize = (): void => scheduleRenderRef.current?.();
+    window.addEventListener('resize', onWindowResize);
+    return () => window.removeEventListener('resize', onWindowResize);
+  }, []);
+
   return (
     <canvas
       ref={canvasRef}

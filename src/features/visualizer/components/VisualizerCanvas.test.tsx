@@ -342,6 +342,28 @@ describe('VisualizerCanvas lifecycle', () => {
     expect(callbacks.size).toBe(0);
   });
 
+  it('repaints on a window resize, not only the canvas observer', () => {
+    // The webview can change the window size without the canvas observer
+    // firing, so a window resize event must invalidate the backing store too.
+    render(<VisualizerCanvas artUrl="" artKey="" />);
+    flushFrame();
+    expect(callbacks.size).toBe(0);
+
+    act(() => window.dispatchEvent(new Event('resize')));
+
+    expect(callbacks.size).toBe(1);
+    flushFrame(1_016);
+    expect(hoisted.renderFrameMock).toHaveBeenCalledTimes(2);
+    expect(callbacks.size).toBe(0);
+  });
+
+  it('removes the window resize listener on unmount', () => {
+    const removeEventListener = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = render(<VisualizerCanvas artUrl="" artKey="" />);
+    unmount();
+    expect(removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
+  });
+
   const lastDrawnFrame = (): { bands: Float32Array } => {
     const calls = hoisted.renderFrameMock.mock.calls;
     return calls[calls.length - 1]?.[3] as { bands: Float32Array };
